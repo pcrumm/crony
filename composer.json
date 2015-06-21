@@ -1,0 +1,24 @@
+{
+    "name": "pcrumm/crony",
+    "type": "library",
+    "description": "PHP-based cron manager",
+    "keywords": ["cron", "cli"],
+    "homepage": "http://github.com/pcrumm/crony",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Phil Crumm",
+            "email": "pkcrumm@gmail.com",
+            "homepage": "http://philcrumm.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4",
+        "hellogerard/jobby": "dev-master"
+    },
+    "autoload": {
+        "psr-0": {
+            "Crony": "src/"
+        }
+    }
+}
