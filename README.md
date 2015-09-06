@@ -18,7 +18,7 @@
 
 ### jobs.php
 
-`jobs.php` loads and runs Crony tasks, and should be referrenced from your crontab. It should include a call to the `Crony::init()` method, which takes a single argument: the namespace that your tasks reside under. This namespace should be [PSR-0 autoloaded by composer](https://getcomposer.org/doc/01-basic-usage.md#autoloading), and by convention should exist in the `src` directory in your project's root. In the example below, all jobs are sub-directories of the `src/Crony/ExampleTasks` directory and thus exist in the `\Crony\ExampleTasks` namespace.
+`jobs.php` loads and runs Crony tasks, and should be referrenced from your crontab. It should include a call to the `Crony::init()` method, which takes a single argument: the namespace that your tasks reside under. This namespace should be [PSR-0 autoloaded by composer](https://getcomposer.org/doc/01-basic-usage.md#autoloading), and by convention should exist in the `src` directory in your project's root. In the example below, all jobs are sub-directories of the `src/PhilCrumm/ExampleTasks` directory and thus exist in the `\PhilCrumm\ExampleTasks` namespace.
 
 ```php
 <?php
