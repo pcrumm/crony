@@ -1,0 +1,124 @@
+#!/usr/bin/env php
+<?php
+/**
+ *  @package Crony
+ * @author Phil Crumm <pkcrumm@gmail.com>
+ * @license MIT
+ *
+ * This is the command-line tool for running Crony tasks. This
+ * should be utilized only for development purposes--generally
+ * speaking, one should run the Crony runner directly (via a
+ * script instantiated via cron).
+ */
+
+// See if a task file was specified on the command line.
+$options = getopt( 't:j:', array( 'taskfile:', 'job:' ) );
+$task_file = isset( $options['taskfile'] ) ?
+    $options['taskfile'] : // Use the 'taskfile' parameter if set
+    ( isset( $options['t'] ) ?
+        $options['t'] : // Use the 't' parameter if set
+    false // Otherwise, default to "false"
+);
+
+// Exit if no task file was specified.
+if ( !$task_file ) {
+    $help_text = <<< EOE
+USAGE:
+./bin/crony --taskfile Jobs.php --job JobName
+
+Where the taskfile is a file that instantiates Crony, and job is the name of the job to run.
+
+EOE;
+    die( $help_text );
+}
+
+// Bring in all of our dependencies
+require dirname( __FILE__ ) . './../vendor/autoload.php';
+
+// Locate the task file
+$task_file_base_path = getcwd() . '/';
+
+// Verify that the task file exists
+if ( !file_exists( $task_file_base_path . $task_file ) ) {
+    die( 'Unable to locate task file ' . $task_file_base_path . $task_file );
+}
+
+// Statically analyze the task file to find our init instructions
+$parser = new PhpParser\Parser( new \PhpParser\Lexer );
+$src = $parser->parse( file_get_contents( $task_file_base_path . $task_file ) );
+
+// Now, we need to look for the init instructions...
+// We're searching for a function call that looks like: Crony\Crony::init( '...' )
+// @TODO let's make this more flexible... we have the framework in place
+$crony_task_path = false;
+foreach( $src as $statement ) {
+    // We've found a possible function call to Crony!
+    if ( isset( $statement->expr->var->class->parts ) ) {
+        // Let's see if this is a crony call...
+        if ( $statement->expr->var->class->parts[0] == 'Crony' && $statement->expr->var->class->parts[1] == 'Crony' ) {
+            if ( isset( $statement->expr->var->args[0]->value->value ) ) {
+                $crony_task_path = $statement->expr->var->args[0]->value->value;
+            }
+        }
+    }
+}
+
+// Let's see if we found one...
+if ( !$crony_task_path ) {
+    $error_text = <<< EOE
+Unable to locate Crony call in the task file! We are pretty inflexible right now, so make sure your task call looks like:
+
+\Crony\Cron::init( '...' );
+EOE;
+    die( $error_text );
+}
+
+// Now, let's instantiate crony and see what we can do...
+// @TODO let's support dynamically determining the path below
+$crony = \Crony\Crony::init( $crony_task_path, $task_file_base_path . '/src' );
+$job_list =  $crony->get_job_list();
+
+if ( !sizeof( $job_list ) ) {
+    die( 'There are currently no jobs in ' . $crony_task_path . '. You should create one!' );
+}
+
+// Finally, let's see what job we should run...
+$job_name = isset( $options['j'] ) ?
+    $options['j'] : // Use the 'j' flag, if set
+    isset( $options['job'] ) ?
+        $options['job'] : // Use the 'job' flag, if set
+        false; // Otherwise, default to false
+
+// Ensure a job was specified.
+if ( !$job_name || !in_array( $job_name, $job_list ) ) {
+    $error_text = <<< EOE
+You must specify a job to run!
+
+USAGE:
+./bin/crony --taskfile Jobs.php --job JobName
+
+Where the taskfile is a file that instantiates Crony, and job is the name of the job to run.
+------
+Available jobs:
+
+EOE;
+    $error_text .= implode( $job_list , "\n" ) . "\n\n";
+    die( $error_text );
+}
+
+// Run the specified job...
+$full_job_class = $crony_task_path . '\\' . $job_name;
+$job_config = call_user_func( $full_job_class . '::config' );
+
+print "###################################\n";
+print "# Task Name: $job_name\n";
+print "# Task Configuration:\n";
+
+foreach( $job_config as $config_key => $config_value ) {
+    print "#    $config_key: $config_value\n";
+}
+print "####################################\nTask Output:\n\n";
+
+call_user_func( $full_job_class . '::run' );
+
+print "\n";
