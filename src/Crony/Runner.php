@@ -78,7 +78,7 @@ class Runner {
             // If there's no command registered in the configuration, we'll bind an anonymous function to
             // run our specified task.
             if ( !isset( $task_config['command'] ) ) {
-                $task_config['command'] = function() { call_user_func( $task_class . '::run' ); };
+                $task_config['command'] = function() use ($task_class) { return call_user_func( $task_class . '::run' ); };
             }
             
             $runner->add( $task, $task_config );
